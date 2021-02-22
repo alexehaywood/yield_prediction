@@ -1,0 +1,18 @@
+# Files to ignore
+yield_prediction/graphs_for_manuscript.py
+
+yield_prediction/data/original/quantum_descriptors/30_percent_test.csv
+yield_prediction/data/original/quantum_descriptors/70_percent_training.csv
+yield_prediction/data/validation/aryl_halide_key.xlsx
+yield_prediction/data/validation/aryl_halide_mols.xlsx
+
+yield_prediction/tools/data/lcms_yield_extractor.py
+yield_prediction/tools/machine_learning/kernels_grakel-only.py
+yield_prediction/tools/machine_learning/kernels_old.py
+yield_prediction/tools/machine_learning/machine_learning_tests_incl_val.py
+yield_prediction/tools/utils/plot_graphs_for_manuscript.py
+yield_prediction/tools/utils/plotting_old.py
+
+# Directories to ignore
+*/__pycache__
+yield_prediction/graphs_for_manuscript
