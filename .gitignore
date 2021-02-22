@@ -1,4 +1,6 @@
 # Files to ignore
+README.md.ipynb
+
 yield_prediction/graphs_for_manuscript.py
 yield_prediction/*personal_computer*
 
