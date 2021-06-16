@@ -12,12 +12,18 @@ import numpy as np
 from collections import defaultdict
 import openpyxl
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.model_selection import KFold
 import pickle
+
+# import sys
+# sys.path.insert(1, '/home/alexehaywood/Documents/yield_prediction/yield_prediction/')
 
 from tools.data.rdkit_tools import caluclate_tanimoto
 from tools.machine_learning import model_selection
-from tools.machine_learning.kernels import kernel, sklearn_kernel
-from tools.utils import plotting
+from tools.machine_learning.kernels import kernel
+from tools.utils.plotting import plotting
+
 
 def save_fig_to_excel(excel_file, sheet_name, image_file, text=None):
     wb =  openpyxl.load_workbook(excel_file)
@@ -44,7 +50,7 @@ def save_fig_to_excel(excel_file, sheet_name, image_file, text=None):
     wb.save(excel_file)
 
 
-n_jobs=2
+n_jobs=32
 class machine_learning():
     
     def __init__(self, X=None, y=None, models=None, param_grid=None,
@@ -85,12 +91,14 @@ class machine_learning():
             scaler.transform(X_train),
             index=X_train.index
             )
-        self.X_test = pd.DataFrame(
-            scaler.transform(X_test), 
-            index=X_test.index
-            )
+        if X_test:
+            self.X_test = pd.DataFrame(
+                scaler.transform(X_test), 
+                index=X_test.index
+                )
         
-    def preprocess_graph_descriptors(self, X_train=None, X_test=None):
+    def preprocess_graph_descriptors(self, X_train=None, X_test=None,
+                                     kernel_params={}):
         if X_train is None:
             X_train = self.X_train
         if X_test is None:
@@ -100,10 +108,11 @@ class machine_learning():
         graph_kernel = kernel('WeisfeilerLehman')
         
         k_train, k_test = graph_kernel.multiple_descriptor_types(
-            X_train, X_test, n_jobs=n_jobs)    
+            X_train, X_test, n_jobs=n_jobs, **kernel_params)
         
         self.X_train = pd.DataFrame(k_train, index=X_train.index)
-        self.X_test = pd.DataFrame(k_test, index=X_test.index)
+        if X_test is not None:
+            self.X_test = pd.DataFrame(k_test, index=X_test.index)
         
     def preprocess_fingerprint_descriptors(self, X_train=None, X_test=None):
         if X_train is None:
@@ -114,62 +123,96 @@ class machine_learning():
         # Calculate Tanimoto Scores.
         k_train = 1
         k_test = 1
-        if X_train.isnull().values.any() or X_test.isnull().values.any():
-            for i in X_train:
-                train = []
-                test = []
-                for fp1 in X_train[i]:
-                    row = []
-                    for fp2 in X_train[i]:
-                        if pd.isnull(fp1) and pd.isnull(fp2):
-                            row.append(2)
-                        elif pd.isnull(fp1) or pd.isnull(fp2):
-                            row.append(1)
-                        else:
-                            row.append(caluclate_tanimoto(fp1, fp2)+1)
-                    train.append(row)
-                
-                for fp2 in X_test[i]:
-                    row = []
+        if X_test is not None:
+            if X_train.isnull().values.any() or X_test.isnull().values.any():
+                for i in X_train:
+                    train = []
+                    test = []
                     for fp1 in X_train[i]:
-                        if pd.isnull(fp1) and pd.isnull(fp2):
-                            row.append(2)
-                        elif pd.isnull(fp1) or pd.isnull(fp2):
-                            row.append(1)
-                        else:
-                            row.append(caluclate_tanimoto(fp1, fp2)+1)
-                    test.append(row)
+                        row = []
+                        for fp2 in X_train[i]:
+                            if pd.isnull(fp1) and pd.isnull(fp2):
+                                row.append(2)
+                            elif pd.isnull(fp1) or pd.isnull(fp2):
+                                row.append(1)
+                            else:
+                                row.append(caluclate_tanimoto(fp1, fp2)+1)
+                        train.append(row)
                     
-                train = np.array(train)
-                test = np.array(test)
-                
-                k_train = k_train * train
-                k_test = k_test * test
-                 
+                    for fp2 in X_test[i]:
+                        row = []
+                        for fp1 in X_train[i]:
+                            if pd.isnull(fp1) and pd.isnull(fp2):
+                                row.append(2)
+                            elif pd.isnull(fp1) or pd.isnull(fp2):
+                                row.append(1)
+                            else:
+                                row.append(caluclate_tanimoto(fp1, fp2)+1)
+                        test.append(row)
+                        
+                    train = np.array(train)
+                    test = np.array(test)
+                    
+                    k_train = k_train * train
+                    k_test = k_test * test
+                     
+            else:
+                for i in X_train:
+                    train = []
+                    test = []
+                    for fp1 in X_train[i]:
+                        row = []
+                        for fp2 in X_train[i]:
+                            row.append(caluclate_tanimoto(fp1, fp2))
+                        train.append(row)
+                    
+                    for fp2 in X_test[i]:
+                        row = []
+                        for fp1 in X_train[i]:
+                            row.append(caluclate_tanimoto(fp1, fp2))
+                        test.append(row)
+                        
+                    train = np.array(train)
+                    test = np.array(test)
+            
+                    k_train = k_train * train
+                    k_test = k_test * test
+        
         else:
-            for i in X_train:
-                train = []
-                test = []
-                for fp1 in X_train[i]:
-                    row = []
-                    for fp2 in X_train[i]:
-                        row.append(caluclate_tanimoto(fp1, fp2))
-                    train.append(row)
-                
-                for fp2 in X_test[i]:
-                    row = []
+            if X_train.isnull().values.any():
+                for i in X_train:
+                    train = []
                     for fp1 in X_train[i]:
-                        row.append(caluclate_tanimoto(fp1, fp2))
-                    test.append(row)
+                        row = []
+                        for fp2 in X_train[i]:
+                            if pd.isnull(fp1) and pd.isnull(fp2):
+                                row.append(2)
+                            elif pd.isnull(fp1) or pd.isnull(fp2):
+                                row.append(1)
+                            else:
+                                row.append(caluclate_tanimoto(fp1, fp2)+1)
+                        train.append(row)
                     
-                train = np.array(train)
-                test = np.array(test)
-        
-                k_train = k_train * train
-                k_test = k_test * test
-        
+                    train = np.array(train)
+                    
+                    k_train = k_train * train
+                
+            else:
+                for i in X_train:
+                    train = []
+                    for fp1 in X_train[i]:
+                        row = []
+                        for fp2 in X_train[i]:
+                            row.append(caluclate_tanimoto(fp1, fp2))
+                        train.append(row)
+                    
+                    train = np.array(train)
+            
+                    k_train = k_train * train
+
         self.X_train = pd.DataFrame(k_train, index=X_train.index)
-        self.X_test = pd.DataFrame(k_test, index=X_test.index)
+        if X_test is not None:
+            self.X_test = pd.DataFrame(k_test, index=X_test.index)
         
     def r2_and_rmse_scorer(self):
         rmse_scorer = model_selection.scorer(
@@ -182,8 +225,9 @@ class machine_learning():
         
         return scoring
         
-    def tune_hyperparameters_and_run(self, X_train=None, y_train=None, 
-            X_test=None, y_test=None, save_plot_dir=None, save_table_dir=None
+    def tune_hyperparameters_and_run(self, 
+            X_train=None, y_train=None, X_test=None, y_test=None, 
+            save_plot_dir=None, save_table_dir=None, save_model_dir=None
             ):
         
         if self.param_grid is None:
@@ -204,7 +248,58 @@ class machine_learning():
         best_estimator = defaultdict()
         yield_pred = pd.DataFrame()
         scores = defaultdict()
+        training_score = defaultdict(dict)
         
+        if X_test is None:
+            for model_name, model in self.models.items():
+                print('Model: {} \n'.format(model_name))
+
+                tuned_models[model_name], \
+                best_params[model_name], \
+                best_cv_score[model_name], \
+                best_estimator[model_name], \
+                    = model.tune_hyperparameters(
+                        'GridSearchCV',
+                        X_train.to_numpy(),
+                        y_train,
+                        X_test=X_test,
+                        param_grid=self.param_grid[model_name],
+                        scoring = self.r2_and_rmse_scorer(),
+                        refit='R-squared',
+                        n_jobs=n_jobs,
+                        cv=KFold(n_splits=5, shuffle=True, random_state=0)
+                        )
+                
+                best_cv_score[model_name]['mean_test_RMSE'] \
+                    = best_cv_score[model_name]['mean_test_RMSE']*-1
+                    
+            # Save model.
+            if save_model_dir is not None:
+                for model_name, tuned_model in tuned_models.items():
+                    pickle.dump(
+                        tuned_model, 
+                        open(
+                            '{}/{}.joblib'.format(
+                                save_model_dir, 
+                                model_name.replace(' ', '_')
+                                ), 
+                             'wb'
+                             )
+                        )
+            # Save results.
+            if save_table_dir is not None:
+                with pd.ExcelWriter( '{}/results.xlsx'.format(save_table_dir)) as writer:
+    
+                    for name, results in zip(
+                            ['best_params', 'best_cv_score'],
+                            [best_params, best_cv_score]
+                            ):
+    
+                        results = pd.DataFrame(results).round(3)
+                        results.to_excel(writer, sheet_name=name)
+        
+            return best_params, best_cv_score, best_estimator
+            
         if y_test is None:
             for model_name, model in self.models.items():
                 print('Model: {} \n'.format(model_name))
@@ -232,20 +327,33 @@ class machine_learning():
 
                 best_cv_score[model_name]['mean_test_RMSE'] \
                     = best_cv_score[model_name]['mean_test_RMSE']*-1
-
-            # Save results.
-            if save_table_dir  is not None:
+                    
+                y_pred_train = model.tuned_model.predict(X_train.to_numpy())
+                training_score[model_name]['R-squared'] = r2_score(y_train, y_pred_train)
+                training_score[model_name]['RMSE'] = mean_squared_error(y_train, y_pred_train, squared=False)
+            
+            training_score = pd.DataFrame.from_dict(training_score)
+            
+            # Save model.
+            if save_model_dir is not None:
                 for model_name, tuned_model in tuned_models.items():
                     pickle.dump(
                         tuned_model, 
-                        open('{}/{}.joblib'.format(save_table_dir, model_name), 
-                             'wb')
+                        open(
+                            '{}/{}.joblib'.format(
+                                save_model_dir, 
+                                model_name.replace(' ', '_')
+                                ), 
+                             'wb'
+                             )
                         )
+            # Save results.
+            if save_table_dir is not None:
                 with pd.ExcelWriter( '{}/results.xlsx'.format(save_table_dir)) as writer:
     
                     for name, results in zip(
-                            ['best_params', 'best_cv_score'],
-                            [best_params, best_cv_score]
+                            ['best_params', 'best_cv_score', 'training_score'],
+                            [best_params, best_cv_score, training_score]
                             ):
     
                         results = pd.DataFrame(results).round(3)
@@ -286,35 +394,66 @@ class machine_learning():
                     = best_cv_score[model_name]['mean_test_RMSE']*-1
                 scores[model_name]['RMSE'] = scores[model_name]['RMSE']*-1
                 
-            if save_plot_dir is not None:
-                plotting.plot_scatter(
-                    self.y_test, 
-                    yield_pred['yield_pred_{}'.format(model_name)], 
-                    'Experimental Yield (%)', 
-                    'Predicted Yield (%)',  
-                    text='\n'.join(
-                        '{}: {}'.format(k, round(v, 2)) 
-                        for k, v 
-                        in scores[model_name].items()
-                        ),
-                    saveas='{}/{}'.format(save_plot_dir, model_name)
-                    )
-                
-                yield_pred = pd.concat([ y_test, yield_pred], axis=1)
+                y_pred_train = model.tuned_model.predict(X_train.to_numpy())
+                training_score[model_name]['R-squared'] = r2_score(y_train, y_pred_train)
+                training_score[model_name]['RMSE'] = mean_squared_error(y_train, y_pred_train, squared=False)
             
-            # Save results.
-            if save_table_dir  is not None:
+            training_score = pd.DataFrame.from_dict(training_score)
+                
+            if save_plot_dir is not None:
+                for model_name, model in self.models.items():
+                    plotter = plotting(
+                        rcParams={'font.size':10, 'axes.titlesize':10},
+                        fig_kw={'figsize':(6, 4), 'ncols':1, 'nrows':1, 'dpi':600}
+                        )
+                    plotter.add_plot(
+                        x=self.y_test,
+                        y=yield_pred['yield_pred_{}'.format(model_name)],
+                        kind='scatter',
+                        plot_kw={'color':'grey', 'marker':'.', 's':2.5, 
+                                 'alpha':0.75},
+                        text={'x':0.95, 'y':0.05, 'fontsize':6, 'ha':'right',
+                              's':'$R^2$: {:.2f}\nRMSE: {:.1f}'.format(
+                                  scores[model_name]['R-squared'],
+                                  scores[model_name]['RMSE']
+                                  )
+                              },
+                        xlabel='Experimental Yield (%)',
+                        ylabel='Predicted Yield (%)'
+                        )
+                    plotter.add_plot(
+                        x=[0,100],
+                        y=[0,100],
+                        plot_kw={'linestyle':'dashed', 'color':'black',
+                            #'alpha':0.95, 
+                            'linewidth':0.75}
+                        )
+                    plotter.save_plot('{}/{}'.format(
+                        save_plot_dir, 
+                        model_name.replace(' ', '_')
+                        ))
+                            
+            # Save model.
+            if save_model_dir is not None:
                 for model_name, tuned_model in tuned_models.items():
                     pickle.dump(
                         tuned_model, 
-                        open('{}/{}.joblib'.format(save_table_dir, model_name), 
-                             'wb')
+                        open(
+                            '{}/{}.joblib'.format(
+                                save_model_dir, 
+                                model_name.replace(' ', '_')
+                                ), 
+                            'wb'
+                            )
                         )
+                    
+            # Save results.
+            if save_table_dir  is not None:
                 with pd.ExcelWriter( '{}/results.xlsx'.format(save_table_dir)) as writer:
                     
                     for name, results in zip(
-                            ['best_params', 'best_cv_score', 'scores'], 
-                            [best_params, best_cv_score, scores]
+                            ['best_params', 'best_cv_score', 'scores', 'training_scores'], 
+                            [best_params, best_cv_score, scores, training_score]
                             ):
                         
                         results = pd.DataFrame(results).round(3)
@@ -324,87 +463,87 @@ class machine_learning():
             
             return best_params, best_cv_score, best_estimator, yield_pred, scores
 
-    def run(self, X_train=None, y_train=None, X_test=None, y_test=None, 
-            save_plot_dir=None, save_table_dir=None):
+    # def run(self, X_train=None, y_train=None, X_test=None, y_test=None, 
+    #         save_plot_dir=None, save_table_dir=None):
 
-        if X_train is None:    
-            X_train = self.X_train
-        if y_train is None:
-            y_train = self.y_train
-        if X_test is None:
-            X_test = self.X_test
-        if y_test is None:
-            y_test = self.y_test
+    #     if X_train is None:    
+    #         X_train = self.X_train
+    #     if y_train is None:
+    #         y_train = self.y_train
+    #     if X_test is None:
+    #         X_test = self.X_test
+    #     if y_test is None:
+    #         y_test = self.y_test
         
         
-        scoring = self.r2_and_rmse_scorer()
+    #     scoring = self.r2_and_rmse_scorer()
         
-        model_params = defaultdict()
-        yield_pred = pd.DataFrame()
-        scores = defaultdict()
+    #     model_params = defaultdict()
+    #     yield_pred = pd.DataFrame()
+    #     scores = defaultdict()
         
-        for model_name, model in self.models.items():
+    #     for model_name, model in self.models.items():
 
-            model_params[model_name] = model.get_params()
+    #         model_params[model_name] = model.get_params()
 
-            fitted_model = model.fit(X_train, y_train)
+    #         fitted_model = model.fit(X_train, y_train)
             
-            y_pred = fitted_model.predict(X_test)
-            y_pred = pd.DataFrame(y_pred, index=X_test.index, 
-                                  columns=['yield_pred_{}'.format(model_name)]
-                                  )
-            yield_pred = pd.concat([yield_pred, y_pred], axis=1)
+    #         y_pred = fitted_model.predict(X_test)
+    #         y_pred = pd.DataFrame(y_pred, index=X_test.index, 
+    #                               columns=['yield_pred_{}'.format(model_name)]
+    #                               )
+    #         yield_pred = pd.concat([yield_pred, y_pred], axis=1)
             
-            scores[model_name] = model_selection.scorer.run(
-                scoring, fitted_model, X_test, y_test, y_pred
-                )
-            scores[model_name]['RMSE'] = scores[model_name]['RMSE']*-1
+    #         scores[model_name] = model_selection.scorer.run(
+    #             scoring, fitted_model, X_test, y_test, y_pred
+    #             )
+    #         scores[model_name]['RMSE'] = scores[model_name]['RMSE']*-1
           
-            if save_plot_dir is None:
-                    plotting.plot_scatter(
-                    self.y_test, 
-                    yield_pred['yield_pred_{}'.format(model_name)], 
-                    'Experimental Yield (%)', 
-                    'Predicted Yield (%)',  
-                    text='\n'.join(
-                        '{}: {}'.format(k, round(v, 2)) 
-                        for k, v 
-                        in scores[model_name].items()
-                        ),
-                    )
-            else:
-                plotting.plot_scatter(
-                    self.y_test, 
-                    yield_pred['yield_pred_{}'.format(model_name)], 
-                    'Experimental Yield (%)', 
-                    'Predicted Yield (%)',  
-                    text='\n'.join(
-                        '{}: {}'.format(k, round(v, 2)) 
-                        for k, v 
-                        in scores[model_name].items()
-                        ),
-                    saveas='{}/{}'.format(save_plot_dir, model_name)
-                    )
+    #         if save_plot_dir is None:
+    #                 plotting.plot_scatter(
+    #                 self.y_test, 
+    #                 yield_pred['yield_pred_{}'.format(model_name)], 
+    #                 'Experimental Yield (%)', 
+    #                 'Predicted Yield (%)',  
+    #                 text='\n'.join(
+    #                     '{}: {}'.format(k, round(v, 2)) 
+    #                     for k, v 
+    #                     in scores[model_name].items()
+    #                     ),
+    #                 )
+    #         else:
+    #             plotting.plot_scatter(
+    #                 self.y_test, 
+    #                 yield_pred['yield_pred_{}'.format(model_name)], 
+    #                 'Experimental Yield (%)', 
+    #                 'Predicted Yield (%)',  
+    #                 text='\n'.join(
+    #                     '{}: {}'.format(k, round(v, 2)) 
+    #                     for k, v 
+    #                     in scores[model_name].items()
+    #                     ),
+    #                 saveas='{}/{}'.format(save_plot_dir, model_name)
+    #                 )
         
-        yield_pred = pd.concat([y_test, yield_pred], axis=1)
+    #     yield_pred = pd.concat([y_test, yield_pred], axis=1)
         
-        # Save out-of-sample results.
-        if save_table_dir  is not None:
-            with pd.ExcelWriter('{}/results.xlsx'.format(save_table_dir)) as writer:
+    #     # Save out-of-sample results.
+    #     if save_table_dir  is not None:
+    #         with pd.ExcelWriter('{}/results.xlsx'.format(save_table_dir)) as writer:
                 
-                for name, results in zip(
-                        ['model_params', 'scores'],
-                        [model_params, scores]
-                        ):
+    #             for name, results in zip(
+    #                     ['model_params', 'scores'],
+    #                     [model_params, scores]
+    #                     ):
                     
-                    results = pd.DataFrame(results).round(3)
-                    results.to_excel(writer, sheet_name=name)
+    #                 results = pd.DataFrame(results).round(3)
+    #                 results.to_excel(writer, sheet_name=name)
                 
-                yield_pred.sort_index(
-                    level=['additive', 'aryl_halide', 'base', 'ligand']
-                    ).to_excel(writer, sheet_name='y_pred', merge_cells=False)
+    #             yield_pred.sort_index(
+    #                 level=['additive', 'aryl_halide', 'base', 'ligand']
+    #                 ).to_excel(writer, sheet_name='y_pred', merge_cells=False)
         
-        return yield_pred, scores
+    #     return yield_pred, scores
         
     def calculate_individual_scores(self, y_test, y_pred, molecule_test_list, 
                                     molecule_keys, rxn_component, 
@@ -536,7 +675,11 @@ models = {
     'Bayes Generalised Linear Model': model_selection.model_selector(
             'linear_model', 'BayesianRidge'),
     'Random Forest': model_selection.model_selector(
-            'ensemble', 'RandomForestRegressor'),   
+            'ensemble', 'RandomForestRegressor'),
+    'Gradient Boosting': model_selection.model_selector(
+            'ensemble', 'GradientBoostingRegressor'),
+    'Decision Tree': model_selection.model_selector(
+            'tree', 'DecisionTreeRegressor'),
     }
 
 param_grid = {
@@ -575,15 +718,27 @@ param_grid = {
         },
     'Random Forest': {
         'n_estimators': [250, 500, 750, 1000]
+        },
+    'Gradient Boosting': {
+        'n_estimators': [250, 500, 750, 1000],
+        'learning_rate': [0.05, 0.1, 0.15, 0.2]
+        },
+    'Decision Tree': {
         }
     }
 
 
-def in_sample(X, y, models, param_grid, X_type, saveas):
+def in_sample(X, y, models, param_grid, X_type, saveas, save_plots=False, 
+        save_table=False, save_model=False, kwargs={}):
     """
     Perform the in-sample test.
     
     """
+    print('\n#### IN-SAMPLE TEST STARTED ####' + 
+          '\nDescriptor Type: {}'.format(X_type) +
+          '\n{}'.format(saveas)
+          )
+    
     if saveas is not None:
         if not os.path.exists(saveas):
             os.makedirs(saveas)
@@ -591,13 +746,15 @@ def in_sample(X, y, models, param_grid, X_type, saveas):
     # Set descriptors, observables, models and possible parameters for model 
     # tuning.
     in_sample_test = machine_learning(X, y, models, param_grid)
-        
+    
+    print('\nSTEP 1: Splitting descriptors.')    
     # Split descriptors into train and test sets.
     in_sample_test.split_descriptors_in_sample()
     
+    print('\nSTEP 2: Preprocessing descriptors.')
     if X_type == 'graphs':
         # Create graph kernels for the train and test descriptor sets.
-        in_sample_test.preprocess_graph_descriptors()
+        in_sample_test.preprocess_graph_descriptors(kernel_params=kwargs)
     elif X_type == 'quantum':
         # Scale the train and test descriptor sets.
         in_sample_test.preprocess_quantum_descriptors()
@@ -609,8 +766,26 @@ def in_sample(X, y, models, param_grid, X_type, saveas):
         elif X.iloc[0].dtypes == object:
             in_sample_test.preprocess_fingerprint_descriptors()
     
+    print('\nStep 3: Tuning hyperparameters and predicting yeild.')
     # Tune the models hyperparameters and predict reaction yield, calculate 
     # scores, plot graphs and save table.
+    if save_plots:
+        save_plot_dir='{}/plots'.format(saveas)
+        if not os.path.exists(save_plot_dir):
+            os.makedirs(save_plot_dir)
+    else:
+        save_plot_dir=None
+    if save_table:
+        save_table_dir=saveas
+    else:
+        save_table_dir=None
+    if save_model:
+        save_model_dir='{}/models'.format(saveas)
+        if not os.path.exists(save_model_dir):
+            os.makedirs(save_model_dir)
+    else:
+        save_model_dir=None
+        
     in_sample_results = defaultdict()
     in_sample_results['best_params'], \
     in_sample_results['best_cv_score'], \
@@ -618,16 +793,21 @@ def in_sample(X, y, models, param_grid, X_type, saveas):
     in_sample_results['y_pred'], \
     in_sample_results['scores'] \
         = in_sample_test.tune_hyperparameters_and_run(
-            save_plot_dir=saveas,
-            save_table_dir=saveas
+            save_plot_dir=save_plot_dir,
+            save_table_dir=save_table_dir,
+            save_model_dir=save_model_dir
             )
+        
+    print('\n#### FINISHED ####\n\n')
     
     return in_sample_results
 
 
-def out_of_sample(X, y, models, param_grid, 
-                  X_type, molecule_test_list, molecule_keys, rxn_component, 
-                  kernel_name=None, saveas=None):
+def out_of_sample(
+        X, y, models, param_grid, X_type, molecule_test_list, molecule_keys, 
+        rxn_component, saveas=None, save_plots=False, 
+        save_table=False, save_model=False, kwargs={}
+        ):
     """
     Perform the out-of-sample test.
     
@@ -654,7 +834,7 @@ def out_of_sample(X, y, models, param_grid,
     print('\nSTEP 2: Preprocessing descriptors.')
     if X_type == 'graphs':
         # Create graph kernels for the train and test descriptor sets.
-        out_of_sample_test.preprocess_graph_descriptors()
+        out_of_sample_test.preprocess_graph_descriptors(kernel_params=kwargs)
     elif X_type == 'quantum':
         # Scale the train and test descriptor sets.
         out_of_sample_test.preprocess_quantum_descriptors()
@@ -666,14 +846,32 @@ def out_of_sample(X, y, models, param_grid,
     
     print('\nStep 3: Tuning hyperparameters and predicting yeild.')
     # Tune the models hyperparameters and predict reaction yield, calculate 
-    # scores, plot graphs and save table.
+    # scores, plot graphs, save table and model.
+    if save_plots:
+        save_plot_dir='{}/plots'.format(saveas)
+        if not os.path.exists(save_plot_dir):
+            os.makedirs(save_plot_dir)
+    else:
+        save_plot_dir=None
+    if save_table:
+        save_table_dir=saveas
+    else:
+        save_table_dir=None
+    if save_model:
+        save_model_dir='{}/models'.format(saveas)
+        if not os.path.exists(save_model_dir):
+            os.makedirs(save_model_dir)
+    else:
+        save_model_dir=None
+        
     out_of_sample_results = defaultdict()
     out_of_sample_results['best_params'], out_of_sample_results['best_cv_score'], \
     out_of_sample_results['best_estimator'], out_of_sample_results['y_pred'], \
     out_of_sample_results['scores'] \
         = out_of_sample_test.tune_hyperparameters_and_run(
-            save_plot_dir=None,
-            save_table_dir=saveas
+            save_plot_dir=save_plot_dir,
+            save_table_dir=save_table_dir,
+            save_model_dir=save_model_dir
             )
     
     # if len(molecule_test_list) > 1:
@@ -695,7 +893,8 @@ def out_of_sample(X, y, models, param_grid,
     return out_of_sample_results
 
 def predict(X_train, y_train, X_test, models, param_grid, X_type, 
-            kernel_name=None, saveas=None):
+            saveas=None, save_table=False, save_model=False, kwargs={}
+            ):
     """
     Perform the validation test.
     
@@ -719,7 +918,7 @@ def predict(X_train, y_train, X_test, models, param_grid, X_type,
     print('\nSTEP 1: Preprocessing descriptors.')
     if X_type == 'graphs':
         # Create graph kernels for the train and test descriptor sets.
-        validation_test.preprocess_graph_descriptors()
+        validation_test.preprocess_graph_descriptors(kernel_params=kwargs)
     elif X_type == 'quantum':
         # Scale the train and test descriptor sets.
         validation_test.preprocess_quantum_descriptors()
@@ -729,16 +928,36 @@ def predict(X_train, y_train, X_test, models, param_grid, X_type,
         elif X_train.iloc[0].dtypes == object:
             validation_test.preprocess_fingerprint_descriptors()
     
-    print('\nStep 2: Tuning hyperparameters and predicting yeild.')
+    print('\nStep 2: Tuning hyperparameters and predicting yield.')
     # Tune the models hyperparameters and predict reaction yield, calculate 
-    # scores, plot graphs and save table.
+    # scores, plot graphs, save table and model.
+    if save_table:
+        save_table_dir=saveas
+    else:
+        save_table_dir=None
+    if save_model:
+        save_model_dir='{}/models'.format(saveas)
+        if not os.path.exists(save_model_dir):
+            os.makedirs(save_model_dir)
+    else:
+        save_model_dir=None
     validation_results = defaultdict()
-    validation_results['best_params'], validation_results['best_cv_score'], \
-    validation_results['best_estimator'], validation_results['y_pred'], \
-        = validation_test.tune_hyperparameters_and_run(
-            save_plot_dir=None,
-            save_table_dir=saveas
-            )
+    if X_test:
+        validation_results['best_params'], validation_results['best_cv_score'], \
+        validation_results['best_estimator'], validation_results['y_pred'], \
+            = validation_test.tune_hyperparameters_and_run(
+                save_plot_dir=None,
+                save_table_dir=save_table_dir,
+                save_model_dir=save_model_dir
+                )
+    else:
+        validation_results['best_params'], validation_results['best_cv_score'], \
+        validation_results['best_estimator'], \
+            = validation_test.tune_hyperparameters_and_run(
+                save_plot_dir=None,
+                save_table_dir=save_table_dir,
+                save_model_dir=save_model_dir
+                )
     
     print('\n#### FINISHED ####\n\n')
     
