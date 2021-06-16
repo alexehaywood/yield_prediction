@@ -90,7 +90,10 @@ def main():
     info['quantum_noI']['X_type'] = 'quantum'
     info['quantum_noI']['model_names'] = [
         'SVR - Linear Kernel', 'SVR - Poly Kernel', 'SVR - RBF Kernel',
-        'SVR - Sigmoid Kernel', 'Random Forest'
+        'SVR - Sigmoid Kernel', 'Random Forest',
+        'Linear Regression', 'k-Nearest Neighbours', 
+        'Bayes Generalised Linear Model',
+        'Gradient Boosting', 'Decision Tree'
         ]
     info['quantum_noI']['X'] = pd.read_excel(
         'data/original/quantum_descriptors/quantum_descriptors.xlsx',
@@ -101,6 +104,7 @@ def main():
             iodine_mols, 'aryl_halide'
             )
         ]
+    info['quantum_noI']['kwargs'] = None
 
     dir_setup(
         descriptor_names=[info[k]['dir'] for k in info.keys()],
@@ -169,7 +173,11 @@ def main():
                 molecule_keys=molecule_keys,
                 rxn_component=rxn_component, 
                 saveas='./results/{}/{}/{}/{}'.format(
-                    info_d['dir'], test_name, rxn_component, name)
+                    info_d['dir'], test_name, rxn_component, name),
+                save_plots=False,
+                save_table=True,
+                save_model=False,
+                kwargs=info_d['kwargs']
                 )
             
         # Aryl Halide Tests.
@@ -214,7 +222,11 @@ def main():
                 molecule_keys=molecule_keys,
                 rxn_component=rxn_component, 
                 saveas='./results/{}/{}/{}/{}'.format(
-                    info_d['dir'], test_name, rxn_component, name)
+                    info_d['dir'], test_name, rxn_component, name),
+                save_plots=False,
+                save_table=True,
+                save_model=False,
+                kwargs=info_d['kwargs']
                 )
         
         # Leave-one-out Tests.
@@ -236,7 +248,11 @@ def main():
                     molecule_keys=molecule_keys,
                     rxn_component=rxn_component, 
                     saveas='./results/{}/{}/{}/{}'.format(
-                        info_d['dir'], test_name, rxn_component, mol)
+                        info_d['dir'], test_name, rxn_component, mol),
+                    save_plots=False,
+                    save_table=True,
+                    save_model=False,
+                    kwargs=info_d['kwargs']
                     )
         
             
