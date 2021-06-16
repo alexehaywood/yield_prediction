@@ -37,8 +37,8 @@ class kernel():
             base_kernel = 'VertexHistogram'
         k = getattr(kernels, self.kernel_name)
         k_base = getattr(kernels, base_kernel)
-        # self.kernel = k(base_kernel=k_base, *args, **kwargs)
-        self.kernel = k(base_graph_kernel=k_base, *args, **kwargs)
+        self.kernel = k(base_kernel=k_base, *args, **kwargs)
+        # self.kernel = k(base_graph_kernel=k_base, *args, **kwargs)
         
     def fit_and_transform(self, X):
         """
@@ -95,13 +95,18 @@ class kernel():
             X_test.
 
         """
+        self.define_kernel(normalize=True, **kernel_params)
+        
         self.fit_and_transform(X_train)
-        self.transform_data(X_test)
+        if X_test is not None:
+            self.transform_data(X_test)
     
         k_train = self.fitted_kernel
-        k_test = self.transformed_kernel
-        
-        return k_train, k_test   
+        if X_test is not None:
+            k_test = self.transformed_kernel
+            return k_train, k_test   
+        else:
+            return k_train
     
     def calculate_kernel_matrices_with_missing_mols(self, X_train, X_test, **kernel_params):
         """
@@ -238,23 +243,32 @@ class kernel():
         
     def multiple_descriptor_types(self, X_train, X_test, **kernel_params):
         k_train = 1
-        k_test = 1
         
-        if X_train.isnull().values.any() or X_test.isnull().values.any(): 
-            for i in X_train:
-                print(i)
-                train, test = self.calculate_kernel_matrices_with_missing_mols(
-                    X_train[i], X_test[i], **kernel_params
-                    )
-                k_train = k_train * train
-                k_test = k_test * test
+        if X_test is not None:
+            k_test = 1
+            
+            if X_train.isnull().values.any() or X_test.isnull().values.any(): 
+                for i in X_train:
+                    train, test = self.calculate_kernel_matrices_with_missing_mols(
+                        X_train[i], X_test[i], **kernel_params
+                        )
+                    k_train = k_train * train
+                    k_test = k_test * test
+            else:
+                for i in X_train:
+                    train, test = self.calculate_kernel_matrices(
+                        X_train[i], X_test[i], **kernel_params
+                        )
+                    k_train = k_train * train
+                    k_test = k_test * test
+                    
         else:
+            k_test = None
             for i in X_train:
-                train, test = self.calculate_kernel_matrices(
-                    X_train[i], X_test[i], **kernel_params
+                train = self.calculate_kernel_matrices(
+                    X_train[i], None, **kernel_params
                     )
-                k_train = k_train * train
-                k_test = k_test * test
+                k_train = k_train * train          
             
         return k_train, k_test
     
