@@ -12,6 +12,7 @@ from generate_descriptors import assemble_graph_descriptors, assemble_fingerprin
 import tools.data.rdkit_tools as rd
 import tools.machine_learning.machine_learning_tests as ml_tests
 
+
 class ranking():
         
     def rank_mols(mols, molecule_keys, rxn_component, yields):
@@ -85,83 +86,151 @@ def main():
     info['quantum']['X_type'] = 'quantum'
     info['quantum']['model_names'] = [
         'SVR - Linear Kernel', 'SVR - Poly Kernel', 'SVR - RBF Kernel',
-        'SVR - Sigmoid Kernel', 'Random Forest'
+        'SVR - Sigmoid Kernel', 'Random Forest',
+        'Linear Regression', 'k-Nearest Neighbours', 
+        'Bayes Generalised Linear Model',
+        'Gradient Boosting', 'Decision Tree'
         ]
     info['quantum']['X'] = pd.read_excel(
         'data/original/quantum_descriptors/quantum_descriptors.xlsx',
         index_col=[0,1,2,3,4]
         )
+    info['quantum']['kwargs'] = None
     
     info['one-hot'] = defaultdict()
     info['one-hot']['dir'] = 'one_hot_encodings'
     info['one-hot']['X_type'] = 'one-hot'
     info['one-hot']['model_names'] = [
         'SVR - Linear Kernel', 'SVR - Poly Kernel', 'SVR - RBF Kernel',
-        'SVR - Sigmoid Kernel', 'Random Forest'
+        'SVR - Sigmoid Kernel', 'Random Forest',
+        'Linear Regression', 'k-Nearest Neighbours', 
+        'Bayes Generalised Linear Model',
+        'Gradient Boosting', 'Decision Tree'
         ]
     info['one-hot']['X'] = assemble_one_hot_encondings(
         rxn_components, reactions
         )
+    info['one-hot']['kwargs'] = None
 
-    info['graphs'] = defaultdict()
-    info['graphs']['dir'] = 'graph_descriptors'
-    info['graphs']['X_type'] = 'graphs'
-    info['graphs']['model_names'] = ['SVR - Precomputed Kernel']
-    info['graphs']['X'] = assemble_graph_descriptors(
-        rxn_components, reactions, rxn_smiles
-        )
+    for n in np.arange(2, 11):
+        info['graphs_WL{}'.format(n)] = defaultdict()
+        info['graphs_WL{}'.format(n)]['dir'] = 'graph_descriptors/WL{}'.format(n)
+        info['graphs_WL{}'.format(n)]['X_type'] = 'graphs'
+        info['graphs_WL{}'.format(n)]['model_names'] = [
+            'SVR - Precomputed Kernel', 
+            'SVR - Linear Kernel', 'SVR - Poly Kernel', 'SVR - RBF Kernel',
+            'SVR - Sigmoid Kernel', 'Random Forest',
+            'Linear Regression', 'k-Nearest Neighbours', 
+            'Bayes Generalised Linear Model',
+            'Gradient Boosting', 'Decision Tree'
+            ]
+        info['graphs_WL{}'.format(n)]['X'] = graphs
+        info['graphs_WL{}'.format(n)]['kwargs'] = {'niter': int(n)}
 
     for fp, fp_type, fps_kw in zip(
             [
-             'FMorgan1_1024', 'FMorgan2_1024', 'FMorgan3_1024',
-             'FMorgan1_2048', 'FMorgan2_2048', 'FMorgan3_2048',
-             'Morgan1_1024', 'Morgan2_1024', 'Morgan3_1024',
-             'Morgan1_2048', 'Morgan2_2048', 'Morgan3_2048',
-             'MACCS', 
-             'RDK_1024', 'RDK_2048'
-             ],
+                'FMorgan1_32', 'FMorgan1_64', 
+                    'FMorgan1_128',  'FMorgan1_256', 
+                    'FMorgan1_1024', 'FMorgan1_2048',
+                'FMorgan2_32', 'FMorgan2_64', 
+                    'FMorgan2_128',  'FMorgan2_256', 
+                    'FMorgan2_1024', 'FMorgan2_2048',
+                'FMorgan3_32', 'FMorgan3_64', 
+                    'FMorgan3_128',  'FMorgan3_256', 
+                    'FMorgan3_1024', 'FMorgan3_2048',
+                'Morgan1_32', 'Morgan1_64', 
+                    'Morgan1_128',  'Morgan1_256', 
+                    'Morgan1_1024', 'Morgan1_2048',
+                'Morgan2_32', 'Morgan2_64', 
+                    'Morgan2_128',  'Morgan2_256', 
+                    'Morgan2_1024', 'Morgan2_2048',
+                'Morgan3_32', 'Morgan3_64', 
+                    'Morgan3_128',  'Morgan3_256', 
+                    'Morgan3_1024', 'Morgan3_2048',
+                'MACCS', 
+                'RDK_32', 'RDK_64',
+                    'RDK_128',  'RDK_256',
+                    'RDK_1024', 'RDK_2048'
+                ],
             [
-             rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
-             rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
-             rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
-             rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
-             rd.GenMACCSKeys, 
-             rd.RDKFingerprint, rd.RDKFingerprint
-             ],
+                rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect, 
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect, 
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect, 
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect, 
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect, 
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect, 
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                    rd.GetMorganFingerprintAsBitVect, rd.GetMorganFingerprintAsBitVect,
+                rd.GenMACCSKeys, 
+                rd.RDKFingerprint, rd.RDKFingerprint,
+                    rd.RDKFingerprint, rd.RDKFingerprint,
+                    rd.RDKFingerprint, rd.RDKFingerprint
+              ],
             [
-             {'radius':1, 'useFeatures':True, 'nBits':1024}, {'radius':2, 'useFeatures':True, 'nBits':1024}, {'radius':3, 'useFeatures':True, 'nBits':1024},
-             {'radius':1, 'useFeatures':True, 'nBits':2048}, {'radius':2, 'useFeatures':True, 'nBits':2048}, {'radius':3, 'useFeatures':True, 'nBits':2048},
-             {'radius':1, 'nBits':1024}, {'radius':2, 'nBits':1024}, {'radius':3, 'nBits':1024},
-             {'radius':1, 'nBits':2048}, {'radius':2, 'nBits':2048}, {'radius':3, 'nBits':2048},
-             {}, 
-             {'fpSize':1024}, {'fpSize':2048}
-             ]
+                {'radius':1, 'useFeatures':True, 'nBits':32}, {'radius':1, 'useFeatures':True, 'nBits':64},
+                    {'radius':1, 'useFeatures':True, 'nBits':128},  {'radius':1, 'useFeatures':True, 'nBits':256},
+                    {'radius':1, 'useFeatures':True, 'nBits':1024}, {'radius':1, 'useFeatures':True, 'nBits':2048},
+                {'radius':2, 'useFeatures':True, 'nBits':32}, {'radius':2, 'useFeatures':True, 'nBits':64},
+                    {'radius':2, 'useFeatures':True, 'nBits':128},  {'radius':2, 'useFeatures':True, 'nBits':256},
+                    {'radius':2, 'useFeatures':True, 'nBits':1024}, {'radius':2, 'useFeatures':True, 'nBits':2048},
+                {'radius':3, 'useFeatures':True, 'nBits':32}, {'radius':3, 'useFeatures':True, 'nBits':64},
+                    {'radius':3, 'useFeatures':True, 'nBits':128},  {'radius':3, 'useFeatures':True, 'nBits':256},
+                    {'radius':3, 'useFeatures':True, 'nBits':1024}, {'radius':3, 'useFeatures':True, 'nBits':2048},
+                {'radius':1, 'nBits':32}, {'radius':1, 'nBits':64},
+                    {'radius':1, 'nBits':128},  {'radius':1, 'nBits':256},
+                    {'radius':1, 'nBits':1024}, {'radius':1, 'nBits':2048},
+                {'radius':2, 'nBits':32}, {'radius':2, 'nBits':64},
+                    {'radius':2, 'nBits':128},  {'radius':2, 'nBits':256},
+                    {'radius':2, 'nBits':1024}, {'radius':2, 'nBits':2048},
+                {'radius':3, 'nBits':32}, {'radius':3, 'nBits':64},
+                    {'radius':3, 'nBits':128},  {'radius':3, 'nBits':256},
+                    {'radius':3, 'nBits':1024}, {'radius':3, 'nBits':2048},
+                {}, 
+                {'fpSize':32}, {'fpSize':64},
+                    {'fpSize':128}, {'fpSize':256},
+                    {'fpSize':1024}, {'fpSize':2048}
+              ]
             ):
         
         info['{}_raw'.format(fp)] = defaultdict()
         info['{}_raw'.format(fp)]['dir'] = 'fp_descriptors/{}/raw'.format(fp)
         info['{}_raw'.format(fp)]['X_type'] = 'fps'
         info['{}_raw'.format(fp)]['model_names'] = ['SVR - Precomputed Kernel']
+        info['{}_raw'.format(fp)]['kwargs'] = None
         
-        for i in ['concat', 'sum']:
+        for i in ['concat', ]:#'sum']:
             info['{}_{}'.format(fp, i)] = defaultdict()
             info['{}_{}'.format(fp, i)]['dir'] = 'fp_descriptors/{}/{}'.format(fp,i)
             info['{}_{}'.format(fp, i)]['X_type'] = 'fps'
             info['{}_{}'.format(fp, i)]['model_names'] = [
             'SVR - Linear Kernel', 'SVR - Poly Kernel', 'SVR - RBF Kernel',
-            'SVR - Sigmoid Kernel', 'Random Forest'
+            'SVR - Sigmoid Kernel', 'Random Forest',
+            'Linear Regression', 'k-Nearest Neighbours', 
+            'Bayes Generalised Linear Model',
+            'Gradient Boosting', 'Decision Tree'
             ]
+            info['{}_{}'.format(fp, i)]['kwargs'] = None
     
         info['{}_raw'.format(fp)]['X'], \
-            info['{}_concat'.format(fp)]['X'], \
-                info['{}_sum'.format(fp)]['X'] = \
+            info['{}_concat'.format(fp)]['X'] = \
                     assemble_fingerprint_descriptors(
-                        rxn_components, reactions, rxn_smiles, fp_type, fps_kw
+                        rxn_components, reactions, rxn_smiles, fp_type, fps_kw,
+                        return_raw=True,  return_concat=True, return_sum=False
                         )
 
     dir_setup(
         descriptor_names=[info[k]['dir'] for k in info.keys()],
-        test_types=['in_sample', 'out_of_sample', 'validation'],
+        test_types=['out_of_sample'],
         test_names={
             'out_of_sample': ['additive', 'aryl_halide', 'base', 'ligand'],
             }
@@ -189,7 +258,7 @@ def main():
         # Split into descriptors (X) and targets (y).
         X = info_d['X'].reset_index('yield_exp', drop=True)
         y = info_d['X'].reset_index('yield_exp').yield_exp
-
+        
         # Additive Tests.
         test_name = 'out_of_sample'
         rxn_component = 'additive'
@@ -226,7 +295,11 @@ def main():
                 molecule_keys=molecule_keys,
                 rxn_component=rxn_component, 
                 saveas='./results/{}/{}/{}/{}'.format(
-                    info_d['dir'], test_name, rxn_component, name)
+                    info_d['dir'], test_name, rxn_component, name),
+                save_plots=False,
+                save_table=True,
+                save_model=False,
+                kwargs=info_d['kwargs']
                 )
             
         # Aryl Halide Tests.
@@ -270,7 +343,11 @@ def main():
                 molecule_keys=molecule_keys,
                 rxn_component=rxn_component, 
                 saveas='./results/{}/{}/{}/{}'.format(
-                    info_d['dir'], test_name, rxn_component, name)
+                    info_d['dir'], test_name, rxn_component, name),
+                save_plots=False,
+                save_table=True,
+                save_model=False,
+                kwargs=info_d['kwargs']
                 )
         
         # Leave-one-out Tests.
@@ -292,7 +369,11 @@ def main():
                     molecule_keys=molecule_keys,
                     rxn_component=rxn_component, 
                     saveas='./results/{}/{}/{}/{}'.format(
-                        info_d['dir'], test_name, rxn_component, 'LOO_{}'.format(mol))
+                        info_d['dir'], test_name, rxn_component, 'LOO_{}'.format(mol)),
+                    save_plots=False,
+                    save_table=True,
+                    save_model=False,
+                    kwargs=info_d['kwargs']
                     )
         
             
