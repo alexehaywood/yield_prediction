@@ -1,0 +1,3 @@
+additive_*C3_NMR_shift,additive_*C3_electrostatic_charge,additive_*C4_NMR_shift,additive_*C4_electrostatic_charge,additive_*C5_NMR_shift,additive_*C5_electrostatic_charge,additive_*N1_electrostatic_charge,additive_*O1_electrostatic_charge,additive_E_HOMO,additive_E_LUMO,additive_V1_frequency,additive_V1_intensity,additive_dipole_moment,additive_electronegativity,additive_hardness,additive_molecular_volume,additive_molecular_weight,additive_ovality,additive_surface_area,name
+151.95,0.723,99.77,-0.493,149.94,0.045,-0.384,-0.077,-0.2612,-0.0106,1074.48,4.665,2.94125,0.14,0.13,88.98,83.09,1.141,109.97,3-methylisoxazole
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,nan
