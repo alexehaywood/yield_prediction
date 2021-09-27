@@ -275,6 +275,7 @@ class plotting:
             n=0
             for index, ax in np.ndenumerate(self.axes):
                 if x[n] is not None:
+                    print(n,x[n])
                     np.put(
                         self.axes, 
                         index, 
