@@ -139,8 +139,8 @@ The work flow of the yield_prediction software is shown below.
 
 | Process | One-hot | Quantum Chemcial | Fingerprints | Tanimoto Kernel | WL Kernel |
 | ------ | ------ | ------ | ------ | ------ | ------ |
-| Generate Descriptors | Generate one-hot encodings. | Compile. | Generate, compile and concatenate. | Generate and compile fingerprints. | Generate and compile graphs | 
-| Descriptor Postprocessing | N/A |  Standardise quantum chemical descriptors | N/A | Calculate Tanimoto kernel | Calculate WL kernel |
+| Generate Descriptors | Generate | Compile | Generate, compile and concatenate | Generate and compile fingerprints | Generate and compile graphs | 
+| Descriptor Postprocessing | N/A |  Standardise | N/A | Calculate Tanimoto kernel | Calculate WL kernel |
 
 ## References
 [1] D. T. Ahneman, J. G. Estrada, S. Lin, S. D. Dreher and A. G. Doyle, *Science*, 2018, **360**, 186–190.
