@@ -111,7 +111,7 @@ python main.py -f <settings_fpath>
 | -f <settings_fpath> | Path to configuration (settings.ini) file in your working directory. |
 
 ## Datasets
-### Doyle *et al*. 
+### Doyle *et al*.<sup>a</sup>1 Dataset
 The SMILES string of the molecules in the Doyle *et al.* reactions and corresponding reaction yields can be found in `yield_prediction/input/Doyle/reactions/*_smi.xlsx`. The quantum chemical descriptors of the molecules in the reactions can be found in `yield_prediction/input/Doyle/quantum_descriptors/`. 
 ### Prospective Reactions
 The SMILES string of the molecules in the prospective reactions can be found in `yield_prediction/input/validation/reactions/*_smi.xlsx`. The quantum chemical descriptors of the molecules in the Doyle *et al.* dataset and prospective reactions can be found in `yield_prediction/input/quantum_descriptors_missing_additive/`. 
@@ -122,6 +122,7 @@ Enter the names and SMILES strings of the molecules in the dataset into an excel
 | componet1a | componet2a | componet3a | componet1a smiles | componet2a smiles | componet3a smiles | x |
 | componet1a | componet2b | componet3b | componet1a smiles | componet2b smiles | componet3b smiles | y | 
 | componet1a | componet2b | componet3c | componet1a smiles | componet2b smiles | componet3c smiles | z |
+
 For this example, the **descriptor_cols**, **descriptor_index** and **target_col** in the configuration file would be defined as:
 ```ini
 descriptor_cols = component1_SMILES, component2_SMILES, component1_SMILES
@@ -131,8 +132,5 @@ target_col = target
 
 Quantum chemical descriptors for the molecules in each reaction component should be defined in seperate excel files. If defining training reactions using **input_reactions_fpath** and test reactions **validation_reactions_fpath**, quantum chemical descripors of the molecules in each reaction component for both reactions should be defined in the same seperate excel files. 
 
-
-
-[//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
-
-   [Doyle *et al.*]: <https://github.com/joemccann/dillinger>
+## References
+[1] D. T. Ahneman, J. G. Estrada, S. Lin, S. D. Dreher and A. G. Doyle, *Science*, 2018, **360**, 186–190.
