@@ -24,9 +24,9 @@ conda env list
 
 ## Usage
 ### Configuration 
-The name of the configuration file name with start with "settings". Use `yield_prediction/settings.ini` as a template. Examples can be found in the `yield_prediction/settings_examples` directory.
+The name of the configuration file should start with "settings". Use `yield_prediction/settings.ini` as a template. Examples can be found in the `yield_prediction/settings_examples` directory.
 
-#### FileSettings Section
+#### FileSettings
 | Parameter | Description |
 | ------ | ------ |
 | **input_reactions_fpath** = str | Excel file containing the smiles strings of the molecules in the reactions. |
@@ -111,22 +111,22 @@ python main.py -f <settings_fpath>
 | -f <settings_fpath> | Path to configuration (settings.ini) file in your working directory. |
 
 ## Datasets
-### Doyle *et al*.<sup>a</sup>1 Dataset
+### Doyle *et al*.<sup>1</sup> Dataset
 The SMILES string of the molecules in the Doyle *et al.* reactions and corresponding reaction yields can be found in `yield_prediction/input/Doyle/reactions/*_smi.xlsx`. The quantum chemical descriptors of the molecules in the reactions can be found in `yield_prediction/input/Doyle/quantum_descriptors/`. 
 ### Prospective Reactions
 The SMILES string of the molecules in the prospective reactions can be found in `yield_prediction/input/validation/reactions/*_smi.xlsx`. The quantum chemical descriptors of the molecules in the Doyle *et al.* dataset and prospective reactions can be found in `yield_prediction/input/quantum_descriptors_missing_additive/`. 
 ### Using Your Own Dataset
 Enter the names and SMILES strings of the molecules in the dataset into an excel document using the format below. 
-| componet1 | componet2 | componet3 | componet1_SMILES | componet2_SMILES | componet3_SMILES | target |
-| --- | --- | --- | --- | --- | --- | --- |
-| componet1a | componet2a | componet3a | componet1a smiles | componet2a smiles | componet3a smiles | x |
-| componet1a | componet2b | componet3b | componet1a smiles | componet2b smiles | componet3b smiles | y | 
-| componet1a | componet2b | componet3c | componet1a smiles | componet2b smiles | componet3c smiles | z |
+| component1 | component2 | component3 | component1_SMILES | component2_SMILES | component3_SMILES | target |
+| ------ | ------ | ------ | ------ | ------ | ------ | ------ |
+| component1a | component2a | component3a | component1a smiles | component2a smiles | component3a smiles | x |
+| component1a | component2b | component3b | component1a smiles | component2b smiles | component3b smiles | y | 
+| component1a | component2b | component3c | component1a smiles | component2b smiles | component3c smiles | z |
 
 For this example, the **descriptor_cols**, **descriptor_index** and **target_col** in the configuration file would be defined as:
 ```ini
 descriptor_cols = component1_SMILES, component2_SMILES, component1_SMILES
-descriptor_index = ['componet1_SMILES', 'componet2_SMILES', 'componet3_SMILES']
+descriptor_index = ['component1_SMILES', 'component2_SMILES', 'component3_SMILES']
 target_col = target
 ```
 
