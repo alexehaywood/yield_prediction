@@ -133,7 +133,8 @@ target_col = target
 Quantum chemical descriptors for the molecules in each reaction component should be defined in seperate excel files. If defining training reactions using **input_reactions_fpath** and test reactions **validation_reactions_fpath**, quantum chemical descripors of the molecules in each reaction component for both reactions should be defined in the same seperate excel files. 
 
 ## Program Work Flow
-The work flow of the yield_prediction software is shown below.  
+The work flow of the yield_prediction software is shown below.
+  
 ![plot](yield_prediction/graphs_for_manuscript/flow_chart.png?raw=true)
 
 | Process | One-hot | Quantum Chemcial | Fingerprints | Tanimoto Kernel | WL Kernel |
