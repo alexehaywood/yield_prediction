@@ -18,4 +18,4 @@ yield_prediction/tools/utils/plotting_old.py
 
 # Directories to ignore
 */__pycache__
-yield_prediction/graphs_for_manuscript
+yield_prediction/output/results
