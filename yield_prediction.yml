@@ -8,5 +8,5 @@ dependencies:
   - grakel=0.1.8
   - openpyxl=3.0.5
   - rdkit=2021.03.4
-  - scikit-learn=0.23.2
+  - scikit-learn=0.24.2
   - xlrd=1.2.0
